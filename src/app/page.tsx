@@ -165,7 +165,7 @@ export default function GeminiReviewPage() {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                           You are about to submit the provided diff content for AI-powered code review.
-                          This action will use the Gemini API ({useProModel ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash"}) and may be subject to usage quotas or costs.
+                          This action will use the Gemini API ({useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}) and may be subject to usage quotas or costs.
                           Do you want to proceed?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -190,7 +190,7 @@ export default function GeminiReviewPage() {
       <Card className="shadow-lg flex flex-col flex-grow">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Review Results</CardTitle>
-          <CardDescription>The generated code review (using {useProModel ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash"}) will appear below.</CardDescription>
+          <CardDescription>The generated code review will appear below.</CardDescription>
         </CardHeader>
         <CardContent className="min-h-[300px] flex flex-col flex-grow">
           {isLoading && accordionValue !== 'diff-section' && ( 
