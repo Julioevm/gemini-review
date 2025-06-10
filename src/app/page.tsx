@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, ScanSearch, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ReactMarkdown from 'react-markdown';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -177,7 +178,7 @@ export default function GeminiReviewPage() {
           <CardDescription>The generated code review will appear below.</CardDescription>
         </CardHeader>
         <CardContent className="min-h-[300px] flex flex-col flex-grow">
-          {isLoading && accordionValue !== 'diff-section' && ( // Show loader here only if diff is collapsed
+          {isLoading && accordionValue !== 'diff-section' && ( 
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground flex-grow">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p>Generating review, please wait...</p>
@@ -190,7 +191,21 @@ export default function GeminiReviewPage() {
           )}
           {reviewOutput && (
             <ScrollArea className="w-full rounded-md border p-4 bg-secondary/20 flex-grow h-0 min-h-[200px]">
-              <pre className="text-sm whitespace-pre-wrap break-words font-code">{reviewOutput}</pre>
+              <ReactMarkdown
+                className="prose prose-sm dark:prose-invert max-w-none"
+                components={{
+                  pre: ({node, ...props}) => <pre className="font-code bg-muted p-2 rounded-md" {...props} />,
+                  code: ({node, inline, ...props}) => <code className={`font-code ${inline ? 'bg-muted px-1 py-0.5 rounded-sm' : ''}`} {...props} />,
+                  h1: ({node, ...props}) => <h1 className="text-2xl font-headline mb-2" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-xl font-headline mb-2" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-lg font-headline mb-1" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1" {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1" {...props} />,
+                  a: ({node, ...props}) => <a className="text-primary hover:underline" {...props} />,
+                }}
+              >
+                {reviewOutput}
+              </ReactMarkdown>
             </ScrollArea>
           )}
         </CardContent>
