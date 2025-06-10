@@ -5,17 +5,16 @@ import * as React from 'react';
 import { Bot, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import ApiKeyDialog from '@/components/ApiKeyDialog'; // Import the new dialog
+import ApiKeyDialog from '@/components/ApiKeyDialog';
+import { useApiKey } from '@/contexts/ApiKeyContext';
 
 export default function AppHeader() {
   const [isApiDialogOpen, setIsApiDialogOpen] = React.useState(false);
+  const { refreshApiKey } = useApiKey();
 
-  // This function will be called by ApiKeyDialog when a key is saved.
-  // It can be used to trigger a re-fetch of the key in the page if needed,
-  // but for now, page.tsx reads from localStorage on demand.
   const handleApiKeySaved = () => {
-    // For now, just log or could trigger a global state update if complex state mgmt was in use
-    console.log('API Key was saved, page components should re-check localStorage on next action.');
+    refreshApiKey(); // Refresh the API key in the context
+    // The dialog will close itself via onOpenChange from its own save handler
   };
 
   return (

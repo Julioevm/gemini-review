@@ -29,9 +29,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Alert, AlertDescription as UIDescription, AlertTitle as UITitle } from "@/components/ui/alert"; // Renamed to avoid conflict
-
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
+import { Alert, AlertDescription as UIDescription, AlertTitle as UITitle } from "@/components/ui/alert";
+import { useApiKey } from '@/contexts/ApiKeyContext'; // Import the hook
 
 export default function GeminiReviewPage() {
   const [diffContent, setDiffContent] = React.useState<string>('');
@@ -40,26 +39,20 @@ export default function GeminiReviewPage() {
   const [reviewOutput, setReviewOutput] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [accordionValue, setAccordionValue] = React.useState<string>('diff-section');
-  const [apiKey, setApiKey] = React.useState<string | null>(null);
   const { toast } = useToast();
-
-  React.useEffect(() => {
-    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    setApiKey(storedApiKey);
-  }, []);
+  
+  const { apiKey, isApiKeySet } = useApiKey(); // Use the context
 
   const handleGetReview = async () => {
-    const currentApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    if (!currentApiKey) {
+    // API key is now sourced from context via `apiKey` and `isApiKeySet`
+    if (!isApiKeySet || !apiKey) {
       toast({
         variant: 'destructive',
         title: 'API Key Missing',
         description: 'Please set your Gemini API Key using the button in the header.',
       });
-      setApiKey(null); // Ensure state reflects missing key
       return;
     }
-    setApiKey(currentApiKey); // Ensure state is up-to-date
 
     if (!diffContent.trim()) {
       toast({
@@ -79,7 +72,7 @@ export default function GeminiReviewPage() {
         diff: diffContent,
         fullReview: fullReview,
         useProModel: useProModel,
-        apiKey: currentApiKey, // Pass the API key
+        apiKey: apiKey, // Pass the API key from context
       };
       const result = await codeReview(input);
       setReviewOutput(result.review);
@@ -115,8 +108,6 @@ export default function GeminiReviewPage() {
       description: 'Review downloaded as gemini_code_review.md.',
     });
   };
-
-  const isApiKeySet = !!apiKey;
 
   return (
     <div className="container mx-auto p-4 md:p-8 flex flex-col flex-grow gap-6">
