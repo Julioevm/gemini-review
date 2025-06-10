@@ -33,6 +33,7 @@ import {
 export default function GeminiReviewPage() {
   const [diffContent, setDiffContent] = React.useState<string>('');
   const [fullReview, setFullReview] = React.useState<boolean>(false);
+  const [useProModel, setUseProModel] = React.useState<boolean>(false);
   const [reviewOutput, setReviewOutput] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [accordionValue, setAccordionValue] = React.useState<string>('diff-section');
@@ -56,6 +57,7 @@ export default function GeminiReviewPage() {
       const input: CodeReviewInput = {
         diff: diffContent,
         fullReview: fullReview,
+        useProModel: useProModel,
       };
       const result = await codeReview(input);
       setReviewOutput(result.review);
@@ -118,16 +120,29 @@ export default function GeminiReviewPage() {
                     className="min-h-[200px] text-sm font-code md:min-h-[250px]"
                     aria-label="Diff content input"
                   />
-                  <div className="flex items-center space-x-2 pt-2">
-                    <Switch
-                      id="full-review-switch"
-                      checked={fullReview}
-                      onCheckedChange={setFullReview}
-                      aria-labelledby="full-review-label"
-                    />
-                    <Label htmlFor="full-review-switch" id="full-review-label">
-                      Full Review (includes style & nitpicks)
-                    </Label>
+                  <div className="flex flex-col space-y-3 pt-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="full-review-switch"
+                        checked={fullReview}
+                        onCheckedChange={setFullReview}
+                        aria-labelledby="full-review-label"
+                      />
+                      <Label htmlFor="full-review-switch" id="full-review-label">
+                        Full Review (includes style & nitpicks)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="pro-model-switch"
+                        checked={useProModel}
+                        onCheckedChange={setUseProModel}
+                        aria-labelledby="pro-model-label"
+                      />
+                      <Label htmlFor="pro-model-switch" id="pro-model-label">
+                        Use Pro Model (Gemini 1.5 Pro)
+                      </Label>
+                    </div>
                   </div>
                 </div>
                 <div className="mt-6 flex items-center">
@@ -150,7 +165,7 @@ export default function GeminiReviewPage() {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                           You are about to submit the provided diff content for AI-powered code review.
-                          This action will use the Gemini API and may be subject to usage quotas or costs.
+                          This action will use the Gemini API ({useProModel ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash"}) and may be subject to usage quotas or costs.
                           Do you want to proceed?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -175,7 +190,7 @@ export default function GeminiReviewPage() {
       <Card className="shadow-lg flex flex-col flex-grow">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Review Results</CardTitle>
-          <CardDescription>The generated code review will appear below.</CardDescription>
+          <CardDescription>The generated code review (using {useProModel ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash"}) will appear below.</CardDescription>
         </CardHeader>
         <CardContent className="min-h-[300px] flex flex-col flex-grow">
           {isLoading && accordionValue !== 'diff-section' && ( 
@@ -221,3 +236,4 @@ export default function GeminiReviewPage() {
     </div>
   );
 }
+

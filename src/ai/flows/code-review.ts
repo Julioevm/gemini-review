@@ -1,3 +1,4 @@
+
 // This file uses server-side code, and must have the `'use server'` directive.
 'use server';
 
@@ -17,6 +18,7 @@ const CodeReviewInputSchema = z.object({
     .string()
     .describe('The diff content to be reviewed.'),
   fullReview: z.boolean().optional().default(false).describe('Whether to perform a full code review with style and nitpicks.'),
+  useProModel: z.boolean().optional().default(false).describe('Whether to use the Gemini 1.5 Pro model (defaults to Gemini 1.5 Flash).'),
 });
 export type CodeReviewInput = z.infer<typeof CodeReviewInputSchema>;
 
@@ -42,7 +44,7 @@ Include style and nitpicks.
 {{/if}}
 
 Diff:
-{{{diff}}}`, 
+{{{diff}}}`,
 });
 
 const codeReviewFlow = ai.defineFlow(
@@ -51,8 +53,10 @@ const codeReviewFlow = ai.defineFlow(
     inputSchema: CodeReviewInputSchema,
     outputSchema: CodeReviewOutputSchema,
   },
-  async input => {
-    const {output} = await codeReviewPrompt(input);
+  async (input: CodeReviewInput) => {
+    const modelToUse = input.useProModel ? 'googleai/gemini-1.5-pro-latest' : 'googleai/gemini-1.5-flash-latest';
+    const {output} = await codeReviewPrompt(input, { model: modelToUse });
     return output!;
   }
 );
+
