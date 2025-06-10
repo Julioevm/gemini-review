@@ -1,9 +1,16 @@
+
 'use client';
 
-import { Bot } from 'lucide-react';
+import { Bot, KeyRound } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function AppHeader() {
+  const handleSetApiKey = () => {
+    // TODO: Implement API key dialog opening logic
+    alert('Set API Key button clicked. Functionality to be implemented.');
+  };
+
   return (
     <header className="bg-card border-b border-border shadow-sm sticky top-0 z-40">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
@@ -13,7 +20,10 @@ export default function AppHeader() {
             Gemini Review
           </span>
         </Link>
-        {/* Future navigation items can go here */}
+        <Button variant="outline" size="sm" onClick={handleSetApiKey}>
+          <KeyRound className="mr-2 h-4 w-4" />
+          Set API Key
+        </Button>
       </div>
     </header>
   );
