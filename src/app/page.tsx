@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, ScanSearch, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, ScanSearch, AlertTriangle, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -29,6 +29,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Alert, AlertDescription as UIDescription, AlertTitle as UITitle } from "@/components/ui/alert"; // Renamed to avoid conflict
+
+const API_KEY_STORAGE_KEY = 'gemini_api_key';
 
 export default function GeminiReviewPage() {
   const [diffContent, setDiffContent] = React.useState<string>('');
@@ -37,9 +40,27 @@ export default function GeminiReviewPage() {
   const [reviewOutput, setReviewOutput] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [accordionValue, setAccordionValue] = React.useState<string>('diff-section');
+  const [apiKey, setApiKey] = React.useState<string | null>(null);
   const { toast } = useToast();
 
+  React.useEffect(() => {
+    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    setApiKey(storedApiKey);
+  }, []);
+
   const handleGetReview = async () => {
+    const currentApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (!currentApiKey) {
+      toast({
+        variant: 'destructive',
+        title: 'API Key Missing',
+        description: 'Please set your Gemini API Key using the button in the header.',
+      });
+      setApiKey(null); // Ensure state reflects missing key
+      return;
+    }
+    setApiKey(currentApiKey); // Ensure state is up-to-date
+
     if (!diffContent.trim()) {
       toast({
         variant: 'destructive',
@@ -50,7 +71,7 @@ export default function GeminiReviewPage() {
     }
 
     setIsLoading(true);
-    setAccordionValue(''); // Collapse accordion when review starts
+    setAccordionValue(''); 
     setReviewOutput('');
 
     try {
@@ -58,12 +79,13 @@ export default function GeminiReviewPage() {
         diff: diffContent,
         fullReview: fullReview,
         useProModel: useProModel,
+        apiKey: currentApiKey, // Pass the API key
       };
       const result = await codeReview(input);
       setReviewOutput(result.review);
       toast({
         title: 'Review Complete',
-        description: 'Code review successfully generated.',
+        description: `Code review successfully generated using ${useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}.`,
       });
     } catch (error) {
       console.error('Error getting code review:', error);
@@ -72,7 +94,7 @@ export default function GeminiReviewPage() {
         title: 'Error',
         description: `Failed to get code review. ${error instanceof Error ? error.message : 'Please try again.'}`,
       });
-      setAccordionValue('diff-section'); // Re-open accordion on error
+      setAccordionValue('diff-section'); 
     } finally {
       setIsLoading(false);
     }
@@ -94,8 +116,19 @@ export default function GeminiReviewPage() {
     });
   };
 
+  const isApiKeySet = !!apiKey;
+
   return (
     <div className="container mx-auto p-4 md:p-8 flex flex-col flex-grow gap-6">
+      {!isApiKeySet && (
+         <Alert variant="destructive" className="mt-4">
+          <Info className="h-4 w-4" />
+          <UITitle>API Key Required</UITitle>
+          <UIDescription>
+            Please set your Gemini API Key using the &quot;Set API Key&quot; button in the header to enable code reviews.
+          </UIDescription>
+        </Alert>
+      )}
       <Accordion type="single" collapsible className="w-full" value={accordionValue} onValueChange={setAccordionValue}>
         <AccordionItem value="diff-section" className="border-0">
           <Card className="shadow-lg">
@@ -107,7 +140,6 @@ export default function GeminiReviewPage() {
                     Enter the diff content to review. {accordionValue === 'diff-section' ? 'Click header to collapse.' : 'Click header to expand.'}
                   </CardDescription>
                 </div>
-                {/* Chevron icon is part of AccordionTrigger */}
               </div>
             </AccordionTrigger>
             <AccordionContent>
@@ -119,6 +151,7 @@ export default function GeminiReviewPage() {
                     onChange={(e) => setDiffContent(e.target.value)}
                     className="min-h-[200px] text-sm font-code md:min-h-[250px]"
                     aria-label="Diff content input"
+                    disabled={!isApiKeySet}
                   />
                   <div className="flex flex-col space-y-3 pt-2">
                     <div className="flex items-center space-x-2">
@@ -127,8 +160,9 @@ export default function GeminiReviewPage() {
                         checked={fullReview}
                         onCheckedChange={setFullReview}
                         aria-labelledby="full-review-label"
+                        disabled={!isApiKeySet}
                       />
-                      <Label htmlFor="full-review-switch" id="full-review-label">
+                      <Label htmlFor="full-review-switch" id="full-review-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
                         Full Review (includes style & nitpicks)
                       </Label>
                     </div>
@@ -138,8 +172,9 @@ export default function GeminiReviewPage() {
                         checked={useProModel}
                         onCheckedChange={setUseProModel}
                         aria-labelledby="pro-model-label"
+                        disabled={!isApiKeySet}
                       />
-                      <Label htmlFor="pro-model-switch" id="pro-model-label">
+                      <Label htmlFor="pro-model-switch" id="pro-model-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
                         Use Pro Model (Gemini 1.5 Pro)
                       </Label>
                     </div>
@@ -148,7 +183,7 @@ export default function GeminiReviewPage() {
                 <div className="mt-6 flex items-center">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button disabled={isLoading || !diffContent.trim()} className="w-full md:w-auto">
+                      <Button disabled={isLoading || !diffContent.trim() || !isApiKeySet} className="w-full md:w-auto">
                         {isLoading ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
@@ -160,12 +195,12 @@ export default function GeminiReviewPage() {
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center">
-                          <AlertTriangle className="mr-2 h-5 w-5 text-accent" />
+                           <AlertTriangle className="mr-2 h-5 w-5 text-accent" />
                           Confirm Review Request
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                           You are about to submit the provided diff content for AI-powered code review.
-                          This action will use the Gemini API ({useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}) and may be subject to usage quotas or costs.
+                          This action will use the Gemini API ({useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}) with your provided API Key.
                           Do you want to proceed?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -190,7 +225,10 @@ export default function GeminiReviewPage() {
       <Card className="shadow-lg flex flex-col flex-grow">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Review Results</CardTitle>
-          <CardDescription>The generated code review will appear below.</CardDescription>
+          <CardDescription>
+            The generated code review will appear below. Model used: {useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}.
+            {!isApiKeySet && <span className="text-destructive"> (API Key not set)</span>}
+          </CardDescription>
         </CardHeader>
         <CardContent className="min-h-[300px] flex flex-col flex-grow">
           {isLoading && accordionValue !== 'diff-section' && ( 
@@ -201,7 +239,7 @@ export default function GeminiReviewPage() {
           )}
           {!isLoading && !reviewOutput && (
             <div className="flex items-center justify-center h-full text-muted-foreground flex-grow">
-              <p>Review output will be displayed here.</p>
+              <p>{isApiKeySet ? "Review output will be displayed here." : "Set your API Key to generate reviews."}</p>
             </div>
           )}
           {reviewOutput && (
@@ -236,4 +274,3 @@ export default function GeminiReviewPage() {
     </div>
   );
 }
-
