@@ -234,11 +234,12 @@ export default function GeminiReviewPage() {
             </div>
           )}
           {reviewOutput && (
-            <ScrollArea className="w-full rounded-md border p-4 bg-secondary/20 flex-grow h-0 min-h-[200px]">
+            <div className="w-full rounded-md border p-4 bg-secondary/20 flex-grow min-h-[200px]">
               <ReactMarkdown
                 className="prose prose-sm dark:prose-invert max-w-none"
                 components={{
-                  pre: ({node, ...props}) => <pre className="font-code bg-muted p-2 rounded-md" {...props} />,
+                  p: ({node, ...props}) => <p className="mb-2" {...props} />,
+                  pre: ({node, ...props}) => <pre className="font-code bg-muted p-2 mb-4 rounded-md" {...props} />,
                   code: ({node, inline, ...props}) => <code className={`font-code ${inline ? 'bg-muted px-1 py-0.5 rounded-sm' : ''}`} {...props} />,
                   h1: ({node, ...props}) => <h1 className="text-2xl font-headline mb-2" {...props} />,
                   h2: ({node, ...props}) => <h2 className="text-xl font-headline mb-2" {...props} />,
@@ -250,7 +251,7 @@ export default function GeminiReviewPage() {
               >
                 {reviewOutput}
               </ReactMarkdown>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
         {reviewOutput && !isLoading && (
