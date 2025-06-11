@@ -18,7 +18,7 @@ import { z } from 'genkit'; // z comes from genkit
 const CodeReviewInputSchema = z.object({
   diff: z.string().describe('The diff content to be reviewed.'),
   fullReview: z.boolean().optional().default(false).describe('Whether to perform a full code review with style and nitpicks.'),
-  useProModel: z.boolean().optional().default(false).describe('Whether to use the Gemini 1.5 Pro model (defaults to Gemini 2.0 Flash).'),
+  useProModel: z.boolean().optional().default(false).describe('Whether to use the Gemini 2.5 Pro model (defaults to Gemini 2.5 Flash).'),
   apiKey: z.string().describe('The Gemini API key provided by the user.'),
 });
 export type CodeReviewInput = z.infer<typeof CodeReviewInputSchema>;
@@ -40,15 +40,18 @@ export async function codeReview(input: CodeReviewInput): Promise<CodeReviewOutp
     plugins: [googleAI({ apiKey })],
   });
 
-  const modelName = useProModel ? 'gemini-1.5-pro' : 'gemini-2.0-flash';
-  const model = dynamicAi.model(modelName);
+  const modelName = useProModel ? 'gemini-2.5-pro-preview-03-25' : 'gemini-2.5-flash-preview-04-17';
+  const model = googleAI.model(modelName);
 
   // Construct the prompt string
   let promptText = `You are a Senior Software Engineer. Review the provided diff and provide feedback.
 
 Focus on identifying potential issues, problems, and key areas for improvement.
 
-Don't explain the code or comment on things that are not worth rising awarness.`;
+Don't explain the code or comment on things that are not worth rising awarness.
+
+Space each section with an empty line to help with readability.
+`;
 
   if (fullReview) {
     promptText += `

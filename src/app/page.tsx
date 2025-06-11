@@ -78,7 +78,7 @@ export default function GeminiReviewPage() {
       setReviewOutput(result.review);
       toast({
         title: 'Review Complete',
-        description: `Code review successfully generated using ${useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}.`,
+        description: `Code review successfully generated using ${useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"}.`,
       });
     } catch (error) {
       console.error('Error getting code review:', error);
@@ -166,7 +166,7 @@ export default function GeminiReviewPage() {
                         disabled={!isApiKeySet}
                       />
                       <Label htmlFor="pro-model-switch" id="pro-model-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
-                        Use Pro Model (Gemini 1.5 Pro)
+                        Use Pro Model (Gemini 2.5 Pro)
                       </Label>
                     </div>
                   </div>
