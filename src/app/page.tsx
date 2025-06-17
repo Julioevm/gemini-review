@@ -30,9 +30,9 @@ import {
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription as UIDescription, AlertTitle as UITitle } from "@/components/ui/alert";
 import { useApiKey } from '@/contexts/ApiKeyContext';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/atom-one-dark.css';
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 const DEFAULT_REVIEW_PROMPT = `You are an expert Senior Software Engineer performing a code review.
 Your goal is to provide constructive feedback to improve the quality, maintainability, and correctness of the code.
@@ -344,21 +344,9 @@ export default function GeminiReviewPage() {
             <div className="w-full rounded-md border p-4 bg-secondary/20 flex-grow min-h-[200px]">
               <ReactMarkdown
                 className="prose prose-sm dark:prose-invert max-w-none"
+                rehypePlugins={[rehypeHighlight]}
                 components={{
                   p: ({node, ...props}) => <p className="mb-2" {...props} />,
-                  code({node, inline, className, children, ...props}) {
-                    const match = /language-(\w+)/.exec(className || '')
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={atomOneDark}
-                        language={match[1]}
-                        PreTag="pre"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>{children}</code>)},
                   h1: ({node, ...props}) => <h1 className="text-2xl font-headline mb-2" {...props} />,
                   h2: ({node, ...props}) => <h2 className="text-xl font-headline mb-2" {...props} />,
                   h3: ({node, ...props}) => <h3 className="text-lg font-headline mb-1" {...props} />,
@@ -384,4 +372,3 @@ export default function GeminiReviewPage() {
     </div>
   );
 }
-
