@@ -68,9 +68,15 @@ ${diff}`;
     if (e instanceof z.ZodError) {
       throw new Error(`Output validation error: ${e.errors.map(err => err.message).join(', ')}`);
     }
-    if (e instanceof Error && (e.message.includes('API key not valid') || e.message.includes('permission denied'))) {
+    if (e instanceof Error) {
+      if (e.message.includes('API key not valid') || e.message.includes('permission denied') || e.message.includes('API_KEY_INVALID')) {
         throw new Error('The provided API Key is invalid or does not have the required permissions. Please check your API Key and try again.');
+      }
+      // Re-throw the original error if it's already an Error instance and not a specific handled one
+      throw e;
     }
-    throw e;
+    // If 'e' is not an Error instance, wrap it in a new Error
+    throw new Error(`An unexpected error occurred during AI generation: ${String(e)}`);
   }
 }
+
