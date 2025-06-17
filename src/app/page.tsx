@@ -56,8 +56,7 @@ Structure your review:
 Avoid commenting on:
 - Purely stylistic preferences unless they significantly impact readability (e.g., inconsistent formatting that makes code hard to follow).
 - Trivial or overly pedantic nitpicks that don't add substantial value.
-
-The code diff to review is below:`;
+- Files without any issue or comment you can skip entirely.`;
 
 const CUSTOM_REVIEW_PROMPT_STORAGE_KEY = 'custom_review_prompt_v2';
 
