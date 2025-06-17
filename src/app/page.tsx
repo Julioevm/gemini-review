@@ -48,7 +48,8 @@ Please analyze the following code diff and focus on:
 8.  **Documentation:** Are comments clear and helpful? Is there a need for more documentation?
 
 Structure your review:
-- Group feedback by file.
+- Use markdown as the output.
+- Group feedback by file, Start by showing the file name with '### File: path/to/file' and finish with --- for each file.
 - For each point, clearly explain the issue and suggest specific improvements or alternatives.
 - If suggesting code changes, provide them in a code block.
 - Prioritize actionable feedback.
@@ -353,6 +354,7 @@ export default function GeminiReviewPage() {
                   ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1" {...props} />,
                   ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1" {...props} />,
                   a: ({node, ...props}) => <a className="text-primary hover:underline" {...props} />,
+                  hr: ({node, ...props}) => <hr className="my-4" {...props} />
                 }}
               >
                 {reviewOutput}
