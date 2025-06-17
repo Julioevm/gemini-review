@@ -10,7 +10,7 @@ import { useApiKey } from '@/contexts/ApiKeyContext';
 
 export default function AppHeader() {
   const [isApiDialogOpen, setIsApiDialogOpen] = React.useState(false);
-  const { refreshApiKey } = useApiKey();
+  const { refreshApiKey, isApiKeySet } = useApiKey();
 
   const handleApiKeySaved = () => {
     refreshApiKey(); // Refresh the API key in the context
@@ -27,9 +27,14 @@ export default function AppHeader() {
               Gemini Review
             </span>
           </Link>
-          <Button variant="outline" size="sm" onClick={() => setIsApiDialogOpen(true)}>
-            <KeyRound className="mr-2 h-4 w-4" />
-            Set API Key
+          <Button
+            variant="outline"
+            size={isApiKeySet ? "icon" : "sm"}
+            onClick={() => setIsApiDialogOpen(true)}
+            title={isApiKeySet ? "Update API Key" : "Set API Key"}
+          >
+            <KeyRound className="h-4 w-4" />
+            {!isApiKeySet && <span>Set API Key</span>}
           </Button>
         </div>
       </header>
