@@ -179,17 +179,19 @@ export default function GeminiReviewPage() {
 
   const handleSaveReview = () => {
     if (!reviewOutput) return;
+    const currentDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const filename = `gemini_code_review_${currentDate}.md`;
     const blob = new Blob([reviewOutput], { type: 'text/markdown;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'gemini_code_review.md';
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
     toast({
       title: 'Review Saved',
-      description: 'Review downloaded as gemini_code_review.md.',
+      description: `Review downloaded as ${filename}.`,
     });
   };
 
