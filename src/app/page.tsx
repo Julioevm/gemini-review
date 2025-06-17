@@ -48,7 +48,6 @@ Please analyze the following code diff and focus on:
 8.  **Documentation:** Are comments clear and helpful? Is there a need for more documentation?
 
 Structure your review:
-- Use markdown as the output.
 - Group feedback by file, Start by showing the file name with '### File: path/to/file' and finish with --- for each file.
 - For each point, clearly explain the issue and suggest specific improvements or alternatives.
 - If suggesting code changes, provide them in a code block.
@@ -349,6 +348,7 @@ export default function GeminiReviewPage() {
                 className="prose prose-sm dark:prose-invert max-w-none"
                 rehypePlugins={[rehypeHighlight]}
                 components={{
+                  code: ({node, ...props}) => <code className="bg-secondary/40 rounded-md px-1 font-mono text-muted-foreground" {...props} />,
                   p: ({node, ...props}) => <p className="mb-2" {...props} />,
                   h1: ({node, ...props}) => <h1 className="text-2xl font-headline mb-2" {...props} />,
                   h2: ({node, ...props}) => <h2 className="text-xl font-headline mb-2" {...props} />,
