@@ -48,7 +48,8 @@ Please analyze the following code diff and focus on:
 8.  **Documentation:** Are comments clear and helpful? Is there a need for more documentation?
 
 Structure your review:
-- Group feedback by file, Start by showing the file name with '### File: path/to/file' and finish with --- for each file.
+- Don't start by mentioning markdown or \`\`\` (code block) simply output the review using markdown style.
+- Group feedback by file: Start by showing the file name with Header 3 like ### File: path/to/file and finish each file section with --- to clearly separate them.
 - For each point, clearly explain the issue and suggest specific improvements or alternatives.
 - If suggesting code changes, provide them in a code block.
 - Prioritize actionable feedback.
