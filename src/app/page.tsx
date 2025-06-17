@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, ScanSearch, AlertTriangle, Info, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -59,6 +60,7 @@ Avoid commenting on:
 - Files without any issue or comment you can skip entirely.`;
 
 const CUSTOM_REVIEW_PROMPT_STORAGE_KEY = 'custom_review_prompt_v2';
+const SKIP_CONFIRMATION_STORAGE_KEY = 'gemini_review_skip_confirmation_v1';
 
 export default function GeminiReviewPage() {
   const [diffContent, setDiffContent] = React.useState<string>('');
@@ -70,11 +72,20 @@ export default function GeminiReviewPage() {
   const { toast } = useToast();
   
   const { apiKey, isApiKeySet } = useApiKey();
+  const [skipReviewConfirmation, setSkipReviewConfirmation] = React.useState<boolean>(false);
+  const [dialogDontAskAgainChecked, setDialogDontAskAgainChecked] = React.useState<boolean>(false);
+  const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = React.useState<boolean>(false);
+
 
   React.useEffect(() => {
     const storedPrompt = localStorage.getItem(CUSTOM_REVIEW_PROMPT_STORAGE_KEY);
     if (storedPrompt) {
       setReviewPrompt(storedPrompt);
+    }
+    const storedSkipConfirmation = localStorage.getItem(SKIP_CONFIRMATION_STORAGE_KEY);
+    if (storedSkipConfirmation === 'true') {
+      setSkipReviewConfirmation(true);
+      setDialogDontAskAgainChecked(true); 
     }
   }, []);
 
@@ -92,7 +103,7 @@ export default function GeminiReviewPage() {
     });
   };
 
-  const handleGetReview = async () => {
+  const performReview = async () => {
     if (!isApiKeySet || !apiKey) {
       toast({
         variant: 'destructive',
@@ -101,7 +112,6 @@ export default function GeminiReviewPage() {
       });
       return;
     }
-
     if (!diffContent.trim()) {
       toast({
         variant: 'destructive',
@@ -148,6 +158,24 @@ export default function GeminiReviewPage() {
       setIsLoading(false);
     }
   };
+
+  const handleInitiateReview = () => {
+    if (skipReviewConfirmation) {
+      performReview();
+    } else {
+      setIsConfirmationDialogOpen(true);
+    }
+  };
+
+  const handleConfirmAndProceed = () => {
+    if (dialogDontAskAgainChecked) {
+      localStorage.setItem(SKIP_CONFIRMATION_STORAGE_KEY, 'true');
+      setSkipReviewConfirmation(true);
+    }
+    setIsConfirmationDialogOpen(false);
+    performReview();
+  };
+
 
   const handleSaveReview = () => {
     if (!reviewOutput) return;
@@ -238,46 +266,60 @@ export default function GeminiReviewPage() {
                   </div>
                 </div>
                 <div className="mt-8 flex items-center">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button disabled={isLoading || !diffContent.trim() || !reviewPrompt.trim() || !isApiKeySet} className="w-full md:w-auto">
-                        {isLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ScanSearch className="mr-2 h-4 w-4" />
-                        )}
-                        Get Review
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center">
-                           <AlertTriangle className="mr-2 h-5 w-5 text-accent" />
-                          Confirm Review Request
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          You are about to submit the provided diff content and review instructions for AI-powered code review.
-                          This action will use the {useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"} model with your provided API Key.
-                          Do you want to proceed?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleGetReview} disabled={isLoading}>
-                          {isLoading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          Confirm & Review
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button 
+                    onClick={handleInitiateReview} 
+                    disabled={isLoading || !diffContent.trim() || !reviewPrompt.trim() || !isApiKeySet} 
+                    className="w-full md:w-auto"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ScanSearch className="mr-2 h-4 w-4" />
+                    )}
+                    Get Review
+                  </Button>
                 </div>
               </div>
             </AccordionContent>
           </Card>
         </AccordionItem>
       </Accordion>
+
+      <AlertDialog open={isConfirmationDialogOpen} onOpenChange={setIsConfirmationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+                <AlertTriangle className="mr-2 h-5 w-5 text-accent" />
+              Confirm Review Request
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to submit the provided diff content and review instructions for AI-powered code review.
+              This action will use the {useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"} model with your provided API Key.
+              Do you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center space-x-2 mt-2 mb-2">
+            <Checkbox
+              id="dont-ask-again"
+              checked={dialogDontAskAgainChecked}
+              onCheckedChange={(checked) => setDialogDontAskAgainChecked(Boolean(checked))}
+            />
+            <Label htmlFor="dont-ask-again" className="text-sm font-normal">
+              Don&apos;t ask me again
+            </Label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsConfirmationDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAndProceed} disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Confirm & Review
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <Card className="shadow-lg flex flex-col flex-grow">
         <CardHeader>
@@ -343,4 +385,3 @@ export default function GeminiReviewPage() {
     </div>
   );
 }
-
