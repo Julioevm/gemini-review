@@ -9,8 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, ScanSearch, AlertTriangle, Info } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, Save, ScanSearch, AlertTriangle, Info, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
   AlertDialog,
@@ -30,21 +29,71 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription as UIDescription, AlertTitle as UITitle } from "@/components/ui/alert";
-import { useApiKey } from '@/contexts/ApiKeyContext'; // Import the hook
+import { useApiKey } from '@/contexts/ApiKeyContext';
+
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+
+const DEFAULT_REVIEW_PROMPT = `You are an expert Senior Software Engineer performing a code review.
+Your goal is to provide constructive feedback to improve the quality, maintainability, and correctness of the code.
+
+Please analyze the following code diff and focus on:
+1.  **Bugs and Potential Errors:** Identify any logical flaws, off-by-one errors, race conditions, or other potential bugs.
+2.  **Security Vulnerabilities:** Check for common security issues (e.g., XSS, SQL injection, insecure handling of secrets).
+3.  **Performance Issues:** Point out any inefficient code, unnecessary computations, or potential bottlenecks.
+4.  **Code Clarity and Readability:** Is the code easy to understand? Are variable and function names clear? Is the logic straightforward?
+5.  **Maintainability and Design:** Does the code follow good design principles (e.g., SOLID, DRY)? Are there overly complex sections that could be refactored?
+6.  **Best Practices and Idioms:** Does the code adhere to language-specific best practices and common coding patterns?
+7.  **Testability:** Is the code structured in a way that makes it easy to write unit tests?
+8.  **Documentation:** Are comments clear and helpful? Is there a need for more documentation?
+
+Structure your review:
+- Group feedback by file.
+- For each point, clearly explain the issue and suggest specific improvements or alternatives.
+- If suggesting code changes, provide them in a code block.
+- Prioritize actionable feedback.
+
+Avoid commenting on:
+- Purely stylistic preferences unless they significantly impact readability (e.g., inconsistent formatting that makes code hard to follow).
+- Trivial or overly pedantic nitpicks that don't add substantial value.
+
+The code diff to review is below:`;
+
+const CUSTOM_REVIEW_PROMPT_STORAGE_KEY = 'custom_review_prompt_v2';
 
 export default function GeminiReviewPage() {
   const [diffContent, setDiffContent] = React.useState<string>('');
-  const [fullReview, setFullReview] = React.useState<boolean>(false);
+  const [reviewPrompt, setReviewPrompt] = React.useState<string>(DEFAULT_REVIEW_PROMPT);
   const [useProModel, setUseProModel] = React.useState<boolean>(false);
   const [reviewOutput, setReviewOutput] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [accordionValue, setAccordionValue] = React.useState<string>('diff-section');
   const { toast } = useToast();
   
-  const { apiKey, isApiKeySet } = useApiKey(); // Use the context
+  const { apiKey, isApiKeySet } = useApiKey();
+
+  React.useEffect(() => {
+    const storedPrompt = localStorage.getItem(CUSTOM_REVIEW_PROMPT_STORAGE_KEY);
+    if (storedPrompt) {
+      setReviewPrompt(storedPrompt);
+    }
+  }, []);
+
+  const handleReviewPromptChange = (newPrompt: string) => {
+    setReviewPrompt(newPrompt);
+    localStorage.setItem(CUSTOM_REVIEW_PROMPT_STORAGE_KEY, newPrompt);
+  };
+
+  const handleResetPrompt = () => {
+    setReviewPrompt(DEFAULT_REVIEW_PROMPT);
+    localStorage.setItem(CUSTOM_REVIEW_PROMPT_STORAGE_KEY, DEFAULT_REVIEW_PROMPT);
+    toast({
+      title: 'Review Instructions Reset',
+      description: 'Instructions have been reset to the default.',
+    });
+  };
 
   const handleGetReview = async () => {
-    // API key is now sourced from context via `apiKey` and `isApiKeySet`
     if (!isApiKeySet || !apiKey) {
       toast({
         variant: 'destructive',
@@ -62,6 +111,14 @@ export default function GeminiReviewPage() {
       });
       return;
     }
+    if (!reviewPrompt.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Review instructions cannot be empty.',
+      });
+      return;
+    }
 
     setIsLoading(true);
     setAccordionValue(''); 
@@ -70,9 +127,9 @@ export default function GeminiReviewPage() {
     try {
       const input: CodeReviewInput = {
         diff: diffContent,
-        fullReview: fullReview,
+        reviewInstructions: reviewPrompt,
         useProModel: useProModel,
-        apiKey: apiKey, // Pass the API key from context
+        apiKey: apiKey,
       };
       const result = await codeReview(input);
       setReviewOutput(result.review);
@@ -126,55 +183,65 @@ export default function GeminiReviewPage() {
             <AccordionTrigger className="p-0 hover:no-underline focus:outline-none w-full data-[state=open]:bg-transparent data-[state=closed]:bg-transparent rounded-t-lg">
               <div className="flex items-center justify-between p-6 w-full">
                 <div className="flex flex-col space-y-1.5 text-left">
-                  <CardTitle className="font-headline text-2xl">Paste Your Diff</CardTitle>
+                  <CardTitle className="font-headline text-2xl">Configure Review</CardTitle>
                   <CardDescription>
-                    Enter the diff content to review. {accordionValue === 'diff-section' ? 'Click header to collapse.' : 'Click header to expand.'}
+                    Paste diff, set instructions, and choose model. {accordionValue === 'diff-section' ? 'Click header to collapse.' : 'Click header to expand.'}
                   </CardDescription>
                 </div>
               </div>
             </AccordionTrigger>
             <AccordionContent>
               <div className="p-6 pt-0">
-                <div className="space-y-4">
-                  <Textarea
-                    placeholder="Paste your git diff here..."
-                    value={diffContent}
-                    onChange={(e) => setDiffContent(e.target.value)}
-                    className="min-h-[200px] text-sm font-code md:min-h-[250px]"
-                    aria-label="Diff content input"
-                    disabled={!isApiKeySet}
-                  />
-                  <div className="flex flex-col space-y-3 pt-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="full-review-switch"
-                        checked={fullReview}
-                        onCheckedChange={setFullReview}
-                        aria-labelledby="full-review-label"
-                        disabled={!isApiKeySet}
-                      />
-                      <Label htmlFor="full-review-switch" id="full-review-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
-                        Full Review (includes style & nitpicks)
-                      </Label>
+                <div className="space-y-6">
+                  <div>
+                    <Label htmlFor="diff-content" className="text-base font-medium">Diff Content</Label>
+                    <Textarea
+                      id="diff-content"
+                      placeholder="Paste your git diff here..."
+                      value={diffContent}
+                      onChange={(e) => setDiffContent(e.target.value)}
+                      className="min-h-[150px] text-sm font-code md:min-h-[200px] mt-1"
+                      aria-label="Diff content input"
+                      disabled={!isApiKeySet}
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="review-instructions" className="text-base font-medium">Review Instructions</Label>
+                      <Button variant="outline" size="sm" onClick={handleResetPrompt} disabled={!isApiKeySet || reviewPrompt === DEFAULT_REVIEW_PROMPT}>
+                        <RotateCcw className="mr-2 h-3 w-3" />
+                        Reset
+                      </Button>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="pro-model-switch"
-                        checked={useProModel}
-                        onCheckedChange={setUseProModel}
-                        aria-labelledby="pro-model-label"
-                        disabled={!isApiKeySet}
-                      />
-                      <Label htmlFor="pro-model-switch" id="pro-model-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
-                        Use Pro Model (Gemini 2.5 Pro)
-                      </Label>
-                    </div>
+                    <Textarea
+                      id="review-instructions"
+                      placeholder="Enter your code review instructions here..."
+                      value={reviewPrompt}
+                      onChange={(e) => handleReviewPromptChange(e.target.value)}
+                      className="min-h-[200px] text-sm md:min-h-[250px]"
+                      aria-label="Review instructions input"
+                      disabled={!isApiKeySet}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Switch
+                      id="pro-model-switch"
+                      checked={useProModel}
+                      onCheckedChange={setUseProModel}
+                      aria-labelledby="pro-model-label"
+                      disabled={!isApiKeySet}
+                    />
+                    <Label htmlFor="pro-model-switch" id="pro-model-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
+                      Use Pro Model (Gemini 2.5 Pro)
+                    </Label>
                   </div>
                 </div>
-                <div className="mt-6 flex items-center">
+                <div className="mt-8 flex items-center">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button disabled={isLoading || !diffContent.trim() || !isApiKeySet} className="w-full md:w-auto">
+                      <Button disabled={isLoading || !diffContent.trim() || !reviewPrompt.trim() || !isApiKeySet} className="w-full md:w-auto">
                         {isLoading ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
@@ -190,8 +257,8 @@ export default function GeminiReviewPage() {
                           Confirm Review Request
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          You are about to submit the provided diff content for AI-powered code review.
-                          This action will use the Gemini API ({useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}) with your provided API Key.
+                          You are about to submit the provided diff content and review instructions for AI-powered code review.
+                          This action will use the {useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"} model with your provided API Key.
                           Do you want to proceed?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -217,7 +284,7 @@ export default function GeminiReviewPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Review Results</CardTitle>
           <CardDescription>
-            The generated code review will appear below. Model used: {useProModel ? "Gemini 1.5 Pro" : "Gemini 2.0 Flash"}.
+            The generated code review will appear below. Model used: {useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"}.
             {!isApiKeySet && <span className="text-destructive"> (API Key not set)</span>}
           </CardDescription>
         </CardHeader>
@@ -239,8 +306,19 @@ export default function GeminiReviewPage() {
                 className="prose prose-sm dark:prose-invert max-w-none"
                 components={{
                   p: ({node, ...props}) => <p className="mb-2" {...props} />,
-                  pre: ({node, ...props}) => <pre className="font-code bg-muted p-2 mb-4 rounded-md" {...props} />,
-                  code: ({node, inline, ...props}) => <code className={`font-code ${inline ? 'bg-muted px-1 py-0.5 rounded-sm' : ''}`} {...props} />,
+                  code({node, inline, className, children, ...props}) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        style={atomOneDark}
+                        language={match[1]}
+                        PreTag="pre"
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={className} {...props}>{children}</code>)},
                   h1: ({node, ...props}) => <h1 className="text-2xl font-headline mb-2" {...props} />,
                   h2: ({node, ...props}) => <h2 className="text-xl font-headline mb-2" {...props} />,
                   h3: ({node, ...props}) => <h3 className="text-lg font-headline mb-1" {...props} />,
@@ -266,3 +344,4 @@ export default function GeminiReviewPage() {
     </div>
   );
 }
+
