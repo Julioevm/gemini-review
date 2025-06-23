@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, ScanSearch, AlertTriangle, Info, RotateCcw } from 'lucide-react';
+import { Loader2, Save, ScanSearch, AlertTriangle, Info, RotateCcw, Upload } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
   AlertDialog,
@@ -75,6 +75,7 @@ export default function GeminiReviewPage() {
   const [skipReviewConfirmation, setSkipReviewConfirmation] = React.useState<boolean>(false);
   const [dialogDontAskAgainChecked, setDialogDontAskAgainChecked] = React.useState<boolean>(false);
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = React.useState<boolean>(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
 
   React.useEffect(() => {
@@ -195,6 +196,55 @@ export default function GeminiReviewPage() {
     });
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    
+    if (event.target) {
+      event.target.value = '';
+    }
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const fileContent = e.target?.result;
+      if (typeof fileContent === 'string') {
+        if (fileContent.includes('\u0000')) {
+          toast({
+            variant: 'destructive',
+            title: 'Invalid File',
+            description: 'The uploaded file appears to be a binary file. Please upload a plain text diff file.',
+          });
+          return;
+        }
+        setDiffContent(fileContent);
+        toast({
+          title: 'File Uploaded',
+          description: `Successfully loaded content from ${file.name}.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'File Read Error',
+          description: 'Could not read the file content as text.',
+        });
+      }
+    };
+
+    reader.onerror = () => {
+      toast({
+        variant: 'destructive',
+        title: 'File Read Error',
+        description: 'An error occurred while reading the file. Please ensure it is a valid text file.',
+      });
+    };
+
+    reader.readAsText(file);
+  };
+
+
   return (
     <div className="container mx-auto p-4 md:p-8 flex flex-col flex-grow gap-6">
       {!isApiKeySet && (
@@ -223,13 +273,26 @@ export default function GeminiReviewPage() {
               <div className="p-6 pt-0">
                 <div className="space-y-6">
                   <div>
-                    <Label htmlFor="diff-content" className="text-base font-medium">Diff Content</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="diff-content" className="text-base font-medium">Diff Content</Label>
+                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!isApiKeySet}>
+                          <Upload className="mr-2 h-3 w-3" />
+                          Upload File
+                      </Button>
+                      <input 
+                          type="file" 
+                          ref={fileInputRef}
+                          onChange={handleFileChange} 
+                          className="hidden"
+                          accept=".diff,.patch,.txt,text/plain"
+                      />
+                    </div>
                     <Textarea
                       id="diff-content"
-                      placeholder="Paste your git diff here..."
+                      placeholder="Paste your git diff here or upload a file..."
                       value={diffContent}
                       onChange={(e) => setDiffContent(e.target.value)}
-                      className="min-h-[150px] text-sm font-code md:min-h-[200px] mt-1"
+                      className="min-h-[150px] text-sm font-code md:min-h-[200px]"
                       aria-label="Diff content input"
                       disabled={!isApiKeySet}
                     />
