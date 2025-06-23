@@ -40,7 +40,7 @@ export async function codeReview(input: CodeReviewInput): Promise<CodeReviewOutp
     plugins: [googleAI({ apiKey })],
   });
 
-  const modelName = useProModel ? 'gemini-2.5-pro-preview-03-25' : 'gemini-2.5-flash-preview-04-17';
+  const modelName = useProModel ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
   const model = googleAI.model(modelName);
 
   // Construct the prompt string using the custom instructions
