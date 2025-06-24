@@ -11,9 +11,8 @@
  * - CodeReviewOutput - The return type for the codeReview function.
  */
 
-import { genkit } from 'genkit'; // Import genkit directly
-import { googleAI } from '@genkit-ai/googleai'; // Import googleAI plugin directly
-import { z } from 'genkit'; // z comes from genkit
+import { genkit, z } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const CodeReviewInputSchema = z.object({
   diff: z.string().describe('The diff content to be reviewed.'),
