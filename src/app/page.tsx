@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -243,7 +242,6 @@ export default function GeminiReviewPage() {
 
     reader.readAsText(file);
   };
-
 
   return (
     <div className="container mx-auto p-4 md:p-8 flex flex-col flex-grow gap-6">
