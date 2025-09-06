@@ -7,10 +7,23 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import ApiKeyDialog from '@/components/ApiKeyDialog';
 import { useApiKey } from '@/contexts/ApiKeyContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AppHeader() {
   const [isApiDialogOpen, setIsApiDialogOpen] = React.useState(false);
-  const { refreshApiKey, isApiKeySet } = useApiKey();
+  const {
+    refreshApiKey,
+    isApiKeySet,
+    selectedProvider,
+    setSelectedProvider,
+    hasMultipleProvidersWithKeys,
+  } = useApiKey();
 
   const handleApiKeySaved = () => {
     refreshApiKey(); // Refresh the API key in the context
@@ -27,15 +40,32 @@ export default function AppHeader() {
               Gemini Review
             </span>
           </Link>
-          <Button
-            variant="outline"
-            size={isApiKeySet ? "icon" : "sm"}
-            onClick={() => setIsApiDialogOpen(true)}
-            title={isApiKeySet ? "Update API Key" : "Set API Key"}
-          >
-            <KeyRound className="h-4 w-4" />
-            {!isApiKeySet && <span>Set API Key</span>}
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasMultipleProvidersWithKeys && (
+              <Select
+                value={selectedProvider}
+                onValueChange={(v) => setSelectedProvider(v as any)}
+              >
+                <SelectTrigger className="w-[130px]" aria-label="AI Provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemini">Gemini</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              variant="outline"
+              size={isApiKeySet ? 'icon' : 'sm'}
+              onClick={() => setIsApiDialogOpen(true)}
+              title={isApiKeySet ? 'Update API Key' : 'Set API Key'}
+            >
+              <KeyRound className="h-4 w-4" />
+              {!isApiKeySet && <span>Set API Key</span>}
+            </Button>
+          </div>
         </div>
       </header>
       <ApiKeyDialog

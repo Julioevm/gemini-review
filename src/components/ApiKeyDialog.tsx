@@ -15,6 +15,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { KeyRound, Save } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useApiKey } from '@/contexts/ApiKeyContext';
+import type { Provider } from '@/contexts/ApiKeyContext';
 
 interface ApiKeyDialogProps {
   isOpen: boolean;
@@ -22,20 +31,31 @@ interface ApiKeyDialogProps {
   onApiKeySaved: () => void;
 }
 
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
+const PROVIDER_LABEL: Record<Provider, string> = {
+  gemini: 'Gemini',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+};
 
 export default function ApiKeyDialog({ isOpen, onOpenChange, onApiKeySaved }: ApiKeyDialogProps) {
-  const [apiKey, setApiKey] = React.useState('');
   const { toast } = useToast();
+  const { selectedProvider, setSelectedProvider, saveApiKey, getApiKey } = useApiKey();
+
+  const [localProvider, setLocalProvider] = React.useState<Provider>(selectedProvider);
+  const [apiKey, setApiKey] = React.useState('');
 
   React.useEffect(() => {
-    if (isOpen) {
-      const storedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-      if (storedKey) {
-        setApiKey(storedKey);
-      }
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    // Sync local state with current selection and its saved key
+    setLocalProvider(selectedProvider);
+    setApiKey(getApiKey(selectedProvider) ?? '');
+  }, [isOpen, selectedProvider, getApiKey]);
+
+  const handleProviderChange = (value: string) => {
+    const p = value as Provider;
+    setLocalProvider(p);
+    setApiKey(getApiKey(p) ?? '');
+  };
 
   const handleSave = () => {
     if (!apiKey.trim()) {
@@ -46,29 +66,50 @@ export default function ApiKeyDialog({ isOpen, onOpenChange, onApiKeySaved }: Ap
       });
       return;
     }
-    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+    // Save the key for the selected provider and set it as the active provider
+    saveApiKey(localProvider, apiKey.trim());
+    setSelectedProvider(localProvider);
+
     toast({
       title: 'API Key Saved',
-      description: 'Your Gemini API Key has been saved locally.',
+      description: `Your ${PROVIDER_LABEL[localProvider]} API Key has been saved locally.`,
     });
-    onApiKeySaved(); // Notify parent that key was saved
+    onApiKeySaved();
     onOpenChange(false);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <KeyRound className="mr-2 h-5 w-5 text-primary" />
-            Set Gemini API Key
+            API Settings
           </DialogTitle>
           <DialogDescription>
-            Enter your Gemini API key. It will be stored locally in your browser.
-            This key is required to use the code review features.
+            Select a provider and set its API key. Keys are stored locally in your browser.
           </DialogDescription>
         </DialogHeader>
+
         <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="provider" className="text-right">
+              Provider
+            </Label>
+            <div className="col-span-3">
+              <Select value={localProvider} onValueChange={handleProviderChange}>
+                <SelectTrigger id="provider">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemini">Gemini</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="api-key" className="text-right">
               API Key
@@ -78,11 +119,12 @@ export default function ApiKeyDialog({ isOpen, onOpenChange, onApiKeySaved }: Ap
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="col-span-3"
-              placeholder="Enter your Gemini API Key"
+              placeholder={`Enter your ${PROVIDER_LABEL[localProvider]} API Key`}
               type="password"
             />
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

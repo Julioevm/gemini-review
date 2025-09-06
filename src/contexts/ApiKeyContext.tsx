@@ -3,45 +3,126 @@
 
 import * as React from 'react';
 
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
+export type Provider = 'gemini' | 'openai' | 'anthropic';
+
+const STORAGE_SELECTED_PROVIDER = 'ai_provider';
+const STORAGE_KEYS: Record<Provider, string> = {
+  gemini: 'gemini_api_key',
+  openai: 'openai_api_key',
+  anthropic: 'anthropic_api_key',
+};
+
+function isProvider(value: unknown): value is Provider {
+  return value === 'gemini' || value === 'openai' || value === 'anthropic';
+}
 
 interface ApiKeyContextType {
-  apiKey: string | null;
-  refreshApiKey: () => void;
+  // Current (selected) provider and its API key
+  selectedProvider: Provider;
+  setSelectedProvider: (p: Provider) => void;
+
+  apiKey: string | null; // API key for selected provider
   isApiKeySet: boolean;
+  refreshApiKey: () => void;
+
+  // Provider-aware helpers
+  saveApiKey: (p: Provider, key: string) => void;
+  getApiKey: (p: Provider) => string | null;
+
+  // UI hint: show quick selector if 2+ providers have keys saved
+  hasMultipleProvidersWithKeys: boolean;
 }
 
 const ApiKeyContext = React.createContext<ApiKeyContextType | undefined>(undefined);
 
 export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
+  const [selectedProvider, setSelectedProviderState] = React.useState<Provider>('gemini');
   const [apiKey, setApiKey] = React.useState<string | null>(null);
+  const [hasMultipleProvidersWithKeys, setHasMultipleProvidersWithKeys] = React.useState(false);
 
-  const refreshApiKey = React.useCallback(() => {
-    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    setApiKey(storedApiKey);
+  const loadSelectedProviderFromStorage = React.useCallback((): Provider => {
+    const stored = localStorage.getItem(STORAGE_SELECTED_PROVIDER);
+    if (isProvider(stored)) return stored;
+
+    // Backward compatibility: if only Gemini key exists from previous versions
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.gemini);
+    if (geminiKey) return 'gemini';
+
+    // Default
+    return 'gemini';
   }, []);
 
+  const recalcState = React.useCallback((prov?: Provider) => {
+    const provider = prov ?? selectedProvider;
+    const key = localStorage.getItem(STORAGE_KEYS[provider]);
+    setApiKey(key);
+
+    let count = 0;
+    (['gemini', 'openai', 'anthropic'] as Provider[]).forEach(p => {
+      if (localStorage.getItem(STORAGE_KEYS[p])) count++;
+    });
+    setHasMultipleProvidersWithKeys(count >= 2);
+  }, [selectedProvider]);
+
   React.useEffect(() => {
-    refreshApiKey(); // Initial load
-    
-    // Listen for storage changes from other tabs/windows if desired,
-    // though for same-page, direct refresh is more reliable.
+    const initialProvider = loadSelectedProviderFromStorage();
+    setSelectedProviderState(initialProvider);
+    recalcState(initialProvider);
+
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === API_KEY_STORAGE_KEY) {
-        refreshApiKey();
+      if (!event.key) return;
+
+      if (event.key === STORAGE_SELECTED_PROVIDER) {
+        const p = loadSelectedProviderFromStorage();
+        setSelectedProviderState(p);
+        recalcState(p);
+        return;
+      }
+
+      if (Object.values(STORAGE_KEYS).includes(event.key)) {
+        recalcState();
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
 
-  }, [refreshApiKey]);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [loadSelectedProviderFromStorage, recalcState]);
+
+  const refreshApiKey = React.useCallback(() => {
+    recalcState();
+  }, [recalcState]);
+
+  const setSelectedProvider = (p: Provider) => {
+    setSelectedProviderState(p);
+    localStorage.setItem(STORAGE_SELECTED_PROVIDER, p);
+    recalcState(p);
+  };
+
+  const saveApiKey = (p: Provider, key: string) => {
+    localStorage.setItem(STORAGE_KEYS[p], key);
+    if (p === selectedProvider) {
+      setApiKey(key);
+    }
+    recalcState(p);
+  };
+
+  const getApiKey = (p: Provider) => localStorage.getItem(STORAGE_KEYS[p]);
 
   const isApiKeySet = !!apiKey;
 
   return (
-    <ApiKeyContext.Provider value={{ apiKey, refreshApiKey, isApiKeySet }}>
+    <ApiKeyContext.Provider
+      value={{
+        selectedProvider,
+        setSelectedProvider,
+        apiKey,
+        isApiKeySet,
+        refreshApiKey,
+        saveApiKey,
+        getApiKey,
+        hasMultipleProvidersWithKeys,
+      }}
+    >
       {children}
     </ApiKeyContext.Provider>
   );

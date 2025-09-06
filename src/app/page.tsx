@@ -32,6 +32,17 @@ import { useApiKey } from '@/contexts/ApiKeyContext';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/atom-one-dark.css';
 
+const PROVIDER_LABEL = {
+  gemini: 'Gemini',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+} as const;
+
+const MODEL_LABELS: Record<keyof typeof PROVIDER_LABEL, { weak: string; strong: string }> = {
+  gemini: { weak: 'Gemini 2.5 Flash', strong: 'Gemini 2.5 Pro' },
+  openai: { weak: 'GPT‑5 mini', strong: 'GPT‑5' },
+  anthropic: { weak: 'Sonnet 4', strong: 'Opus 4.1' },
+};
 
 const DEFAULT_REVIEW_PROMPT = `You are an expert Senior Software Engineer performing a code review.
 Your goal is to provide constructive feedback to improve the quality, maintainability, and correctness of the code.
@@ -70,7 +81,7 @@ export default function GeminiReviewPage() {
   const [accordionValue, setAccordionValue] = React.useState<string>('diff-section');
   const { toast } = useToast();
   
-  const { apiKey, isApiKeySet } = useApiKey();
+  const { apiKey, isApiKeySet, selectedProvider } = useApiKey();
   const [skipReviewConfirmation, setSkipReviewConfirmation] = React.useState<boolean>(false);
   const [dialogDontAskAgainChecked, setDialogDontAskAgainChecked] = React.useState<boolean>(false);
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = React.useState<boolean>(false);
@@ -108,7 +119,7 @@ export default function GeminiReviewPage() {
       toast({
         variant: 'destructive',
         title: 'API Key Missing',
-        description: 'Please set your Gemini API Key using the button in the header.',
+        description: `Please set your ${PROVIDER_LABEL[selectedProvider]} API Key using the button in the header.`,
       });
       return;
     }
@@ -139,12 +150,13 @@ export default function GeminiReviewPage() {
         reviewInstructions: reviewPrompt,
         useProModel: useProModel,
         apiKey: apiKey,
+        provider: selectedProvider,
       };
       const result = await codeReview(input);
       setReviewOutput(result.review);
       toast({
         title: 'Review Complete',
-        description: `Code review successfully generated using ${useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"}.`,
+        description: `Code review successfully generated using ${useProModel ? MODEL_LABELS[selectedProvider].strong : MODEL_LABELS[selectedProvider].weak}.`,
       });
     } catch (error) {
       console.error('Error getting code review:', error);
@@ -180,7 +192,7 @@ export default function GeminiReviewPage() {
   const handleSaveReview = () => {
     if (!reviewOutput) return;
     const currentDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const filename = `gemini_code_review_${currentDate}.md`;
+    const filename = `code_review_${selectedProvider}_${currentDate}.md`;
     const blob = new Blob([reviewOutput], { type: 'text/markdown;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -324,7 +336,7 @@ export default function GeminiReviewPage() {
                       disabled={!isApiKeySet}
                     />
                     <Label htmlFor="pro-model-switch" id="pro-model-label" className={!isApiKeySet ? 'text-muted-foreground' : ''}>
-                      Use Pro Model (Gemini 2.5 Pro)
+                      Use Strong Model ({MODEL_LABELS[selectedProvider].strong})
                     </Label>
                   </div>
                 </div>
@@ -357,7 +369,7 @@ export default function GeminiReviewPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               You are about to submit the provided diff content and review instructions for AI-powered code review.
-              This action will use the {useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"} model with your provided API Key.
+              This action will use the {useProModel ? MODEL_LABELS[selectedProvider].strong : MODEL_LABELS[selectedProvider].weak} model from {PROVIDER_LABEL[selectedProvider]} with your provided API Key.
               Do you want to proceed?
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -388,7 +400,7 @@ export default function GeminiReviewPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Review Results</CardTitle>
           <CardDescription>
-            The generated code review will appear below. Model used: {useProModel ? "Gemini 2.5 Pro" : "Gemini 2.5 Flash"}.
+            The generated code review will appear below. Model used: {useProModel ? MODEL_LABELS[selectedProvider].strong : MODEL_LABELS[selectedProvider].weak}.
             {!isApiKeySet && <span className="text-destructive"> (API Key not set)</span>}
           </CardDescription>
         </CardHeader>
