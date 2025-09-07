@@ -262,7 +262,7 @@ export default function GeminiReviewPage() {
           <Info className="h-4 w-4" />
           <UITitle>API Key Required</UITitle>
           <UIDescription>
-            Please set your Gemini API Key using the &quot;Set API Key&quot; button in the header to enable code reviews.
+            Please set your {PROVIDER_LABEL[selectedProvider]} API Key using the &quot;Set API Key&quot; button in the header to enable code reviews.
           </UIDescription>
         </Alert>
       )}

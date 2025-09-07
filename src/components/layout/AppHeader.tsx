@@ -37,7 +37,7 @@ export default function AppHeader() {
           <Link href="/" className="flex items-center gap-2">
             <Bot className="h-7 w-7 text-primary" />
             <span className="font-headline text-xl font-semibold text-foreground">
-              Gemini Review
+              AI Review
             </span>
           </Link>
           <div className="flex items-center gap-2">
