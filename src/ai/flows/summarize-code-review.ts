@@ -15,10 +15,19 @@ import { getModel } from '@/ai/providers/ai-sdk';
 const ProviderEnum = z.enum(['gemini', 'openai', 'anthropic']);
 export type Provider = z.infer<typeof ProviderEnum>;
 
+// Default instructions used when no custom reviewInstructions are provided.
+const DEFAULT_SUMMARY_PROMPT = `You are an expert code reviewer. Please review the following code changes represented by the diff content.
+
+Focus on identifying issues, problems, key areas for improvement, coding style and nitpicks. Provide a detailed and comprehensive summary of the code review.`;
+
 const SummarizeCodeReviewInputSchema = z.object({
   diffContent: z
     .string()
     .describe('The content of the diff file, representing the code changes.'),
+  reviewInstructions: z
+    .string()
+    .optional()
+    .describe('Optional user-provided review instructions to guide the summary.'),
   apiKey: z
     .string()
     .describe('The API key provided by the user for the selected provider.'),
@@ -44,20 +53,23 @@ export async function summarizeFullCodeReview(
   input: SummarizeCodeReviewInput
 ): Promise<SummarizeCodeReviewOutput> {
   const parsed = SummarizeCodeReviewInputSchema.parse(input);
-  const { diffContent, apiKey, provider, useProModel } = parsed;
+  const { diffContent, reviewInstructions, apiKey, provider, useProModel } = parsed;
 
   if (!apiKey) {
     throw new Error('API Key is required to summarize a code review.');
   }
 
-  const prompt = `You are an expert code reviewer. Please review the following code changes represented by the diff content.
+  // Prefer user-provided instructions when available; fall back to a sensible default.
+  const instructions = (reviewInstructions && reviewInstructions.trim().length > 0)
+    ? reviewInstructions
+    : DEFAULT_SUMMARY_PROMPT;
 
-Diff Content:
-\`\`\`
-${diffContent}
-\`\`\`
+  const prompt = `${instructions}
 
-Focus on identifying issues, problems, key areas for improvement, coding style and nitpicks. Provide a detailed and comprehensive summary of the code review.`;
+  Diff Content:
+  \`\`\`
+  ${diffContent}
+  \`\`\``;
 
   try {
     const model = getModel({ provider, apiKey, useProModel });
